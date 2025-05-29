@@ -28,7 +28,7 @@ df_unique <- df_soccom[!duplicated(df_soccom$profile_unique),]
 
 # create grid
 library(ncdf4)
-grid_size <- 1
+grid_size <- 2
 grid_file <- nc_open('paper/data/grid.nc', write = F)
 grid_long <- ncvar_get(grid_file, 'XC')[,1]
 grid_lat <- ncvar_get(grid_file, 'YC')[1,]
@@ -60,11 +60,12 @@ library(dplyr)
 ggplot(data =  grid_tally %>% filter(!is.na(value)))+
   geom_tile(aes(x = longitude, y = latitude, fill = value,
                 height = height + .022, width = width +.022)) +
+  theme_bw() + 
   SO_coord + SO_theme +
   fronts_dark + continents +
   latitude_lines + longitude_lines +
-  labs(color ='Probability', fill = 'Probability', 
-       title = 'Probability of the most likely cluster')+
+  labs(color ='Number of profiles', fill = 'Number of profiles')+
   theme(panel.grid = element_blank()) +
   scale_color_viridis_c()+  scale_fill_viridis_c()
+ggsave('paper/images/location_summary.png', width = 6, height = 6)
 
