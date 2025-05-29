@@ -99,16 +99,31 @@ a <- ggplot()+
   geom_tile(data = prob_df_sum,
             aes(x = ifelse(longitude > 180, longitude - 360, longitude), y = latitude,
                 fill = factor(cluster_use),
-                height = height + .04, width = width + .04, 
+                colour = NULL,
+                height = height + .035, width = width + .035,
                 alpha = probability)) +
   SO_coord + SO_theme +
-  fronts_dark + continents + latitude_lines + longitude_lines + 
+  geom_contour( data = all_fronts,
+                aes(x = ifelse(longitude > 180, longitude - 360, longitude), 
+                    y = latitude, group = front, z = as.numeric(South), color = front,
+                    linetype = front),bins = 1,
+                size = .24) + 
+  scale_linetype_manual(name = 'Front', 
+                        values = c('seaice' = 'F1', 'subantarctic' = 'twodash', 'subtropical' =  'solid'),
+                        labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  scale_color_manual(values = c('seaice' = 'grey10', 'subantarctic' = 'grey25', 'subtropical' =  'grey40'), 
+                     name = 'Front', labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  continents + latitude_lines + longitude_lines + 
   facet_wrap(~month, ncol = 4, nrow = 1)+
+  guides(color=guide_legend(override.aes=list(fill=NA), order = 3, nrow = 2),
+         linetype=guide_legend(override.aes=list(fill=NA), order = 3, nrow = 2),
+         fill = guide_legend(nrow = 2, order = 1), 
+         alpha = guide_legend(order = 1, nrow = 2)) +
   labs(alpha = 'Probability', fill = 'Cluster')+
   theme(legend.position = 'bottom')
-ggsave(filename = paste0('paper/images/product_clusters_season_row.png'), 
+ggsave(filename = paste0('product_clusters_season_row.png'), 
        plot = a, width = 9, 
-       height = 3.1)
+       height = 3.5)
 
 #####
 
@@ -150,12 +165,12 @@ for (q in 1:length(seasons)) {
   wt_use <- wt
   
   covariates <- diag(c(1,
-                  sin(day_use[1]/365.25 * 2 * pi * 1),
-                  cos(day_use[1]/365.25 * 2 * pi * 1),
-                  sin(day_use[1]/365.25 * 2 * pi * 2),
-                  cos(day_use[1]/365.25 * 2 * pi * 2),
-                  sin(day_use[1]/365.25 * 2 * pi * 3),
-                  cos(day_use[1]/365.25 * 2 * pi * 3)))
+                       sin(day_use[1]/365.25 * 2 * pi * 1),
+                       cos(day_use[1]/365.25 * 2 * pi * 1),
+                       sin(day_use[1]/365.25 * 2 * pi * 2),
+                       cos(day_use[1]/365.25 * 2 * pi * 2),
+                       sin(day_use[1]/365.25 * 2 * pi * 3),
+                       cos(day_use[1]/365.25 * 2 * pi * 3)))
   
   values <- array(dim = c(nrow(pcs_array_predictors), length(wt), length(pressures)))
   for (r in 1:nrow(pcs_array_predictors)) {
@@ -205,7 +220,7 @@ for (q in 1:length(seasons)) {
   }
   avg_var_values <- apply(pressure_var_values,c(1,3), function(x) mean(x))
   var_avg_values <- apply(values,c(1,3), function(x) var(x))
-
+  
   return_values[[q]] <- avg_values
   return_variances[[q]] <- list(avg_var_values, var_avg_values)
   gc()
@@ -219,16 +234,54 @@ oxy_df <- data.frame(grid_use,
 oxy_df$month <- factor(oxy_df$month,
                        levels = c('January 2020', 'April 2020', 'July 2020', 'October 2020'))
 
-a <- ggplot()+
-  geom_tile(data = oxy_df %>% filter(latitude > -75),
-            aes(x = longitude, y = latitude, color = value,
+
+ggplot()+
+  geom_tile(data = oxy_df %>% filter(latitude > -75, month == 'January 2020'),
+            aes(x = longitude, y = latitude, #color = value,
                 fill = value,
-                height = height, width = width)) + 
-  scale_fill_viridis_c() + scale_color_viridis_c() + 
+                height = height + .035, width = width + .035)) + 
+  scale_fill_viridis_c() +# scale_color_viridis_c() + 
   coord_map('ortho', orientation = c(-90, 0, 0), ylim = c(-90, -30)) +
   SO_theme +
-  fronts_light + continents +
-  latitude_lines + longitude_lines +
+  geom_contour( data = all_fronts,
+                aes(x = ifelse(longitude > 180, longitude - 360, longitude), 
+                    y = latitude, group = front, z = as.numeric(South), color = front, linetype = front),bins = 1,
+                size = .24) + 
+  scale_linetype_manual(name = 'Front', 
+                        values = c('seaice' = 'F1', 'subantarctic' = 'twodash', 'subtropical' =  'solid'),
+                        labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  scale_color_manual(values = c('seaice' = 'grey95', 'subantarctic' = 'grey95', 'subtropical' =  'grey95'), 
+                     name = 'Front', labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  continents + latitude_lines + longitude_lines + 
+  facet_wrap(~month, ncol = 4, nrow = 1)+
+  guides(color='none',
+         linetype='none') +
+  facet_wrap(~month, nrow = 2, ncol = 2) + 
+  labs(color ='Oxygen Prediction\n(μmol/kg)', fill = 'Oxygen Prediction\n(μmol/kg)')+
+  theme(panel.grid = element_blank(), legend.key.width = unit(1, "cm"),
+        text = element_text(family = 'Arial', size = 16))
+
+a <- ggplot()+
+  geom_tile(data = oxy_df %>% filter(latitude > -75),
+            aes(x = longitude, y = latitude, #color = value,
+                fill = value,
+                height = height + .035, width = width + .035)) + 
+  scale_fill_viridis_c() +# scale_color_viridis_c() + 
+  coord_map('ortho', orientation = c(-90, 0, 0), ylim = c(-90, -30)) +
+  SO_theme +
+  geom_contour( data = all_fronts,
+                aes(x = ifelse(longitude > 180, longitude - 360, longitude), 
+                    y = latitude, group = front, z = as.numeric(South), color = front, linetype = front),bins = 1,
+                size = .24) + 
+  scale_linetype_manual(name = 'Front', 
+                        values = c('seaice' = 'F1', 'subantarctic' = 'twodash', 'subtropical' =  'solid'),
+                        labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  scale_color_manual(values = c('seaice' = 'grey95', 'subantarctic' = 'grey95', 'subtropical' =  'grey95'), 
+                     name = 'Front', labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  continents + latitude_lines + longitude_lines + 
+  facet_wrap(~month, ncol = 4, nrow = 1)+
+  guides(color='none',
+         linetype='none') +
   facet_wrap(~month, nrow = 2, ncol = 2) + 
   labs(color ='Oxygen Prediction\n(μmol/kg)', fill = 'Oxygen Prediction\n(μmol/kg)')+
   theme(panel.grid = element_blank(), legend.key.width = unit(1, "cm"),
@@ -245,14 +298,24 @@ oxy_df$month <- factor(oxy_df$month,
                        levels = c('January 2020', 'April 2020', 'July 2020', 'October 2020'))
 
 a <- ggplot()+
-  geom_tile(data = oxy_df%>% filter(latitude > -75),
-            aes(x = longitude, y = latitude, color = value,
+  geom_tile(data = oxy_df %>% filter(latitude > -75),
+            aes(x = longitude, y = latitude, #color = value,
                 fill = value,
-                height = height, width = width)) +
-  scale_fill_viridis_c() + scale_color_viridis_c() + 
+                height = height + .035, width = width + .035)) + 
+  scale_fill_viridis_c() + #scale_color_viridis_c() + 
   coord_map('ortho', orientation = c(-90, 0, 0), ylim = c(-90, -30)) +
   SO_theme +
-  fronts_light + continents +
+  geom_contour( data = all_fronts,
+                aes(x = ifelse(longitude > 180, longitude - 360, longitude), 
+                    y = latitude, group = front, z = as.numeric(South), color = front, linetype = front),bins = 1,
+                size = .24) + 
+  scale_linetype_manual(name = 'Front', 
+                        values = c('seaice' = 'F1', 'subantarctic' = 'twodash', 'subtropical' =  'solid'),
+                        labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  scale_color_manual(values = c('seaice' = 'grey95', 'subantarctic' = 'grey95', 'subtropical' =  'grey95'), 
+                     name = 'Front', labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  guides(color='none', linetype='none') +
+  continents +
   latitude_lines + longitude_lines +
   facet_wrap(~month, nrow = 2, ncol = 2) +
   labs(color ='Oxygen SD\n(μmol/kg)', fill = 'Oxygen SD\n(μmol/kg)')+
@@ -264,14 +327,24 @@ ggsave(filename = 'paper/images/product_oxy_var.png',
 
 oxy_df <- data.frame(grid_use, value = sqrt(return_variances[[2]][[1]][,3]))
 a <- ggplot()+
-  geom_tile(data = oxy_df%>% filter(latitude > -75),
-            aes(x = longitude, y = latitude, color = value,
+  geom_tile(data = oxy_df %>% filter(latitude > -75),
+            aes(x = longitude, y = latitude, #color = value,
                 fill = value,
-                height = height, width = width)) +
-  scale_fill_viridis_c() + scale_color_viridis_c() + 
+                height = height + .035, width = width + .035)) + 
+  scale_fill_viridis_c() + 
   coord_map('ortho', orientation = c(-90, 0, 0), ylim = c(-90, -30)) +
   SO_theme +
-  fronts_light + continents +
+  geom_contour( data = all_fronts,
+                aes(x = ifelse(longitude > 180, longitude - 360, longitude), 
+                    y = latitude, group = front, z = as.numeric(South), color = front, linetype = front),bins = 1,
+                size = .24) + 
+  scale_linetype_manual(name = 'Front', 
+                        values = c('seaice' = 'F1', 'subantarctic' = 'twodash', 'subtropical' =  'solid'),
+                        labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  scale_color_manual(values = c('seaice' = 'grey95', 'subantarctic' = 'grey95', 'subtropical' =  'grey95'), 
+                     name = 'Front', labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  guides(color='none', linetype='none') +
+  continents +
   latitude_lines + longitude_lines +
   labs(color ='Oxygen SD\n(μmol/kg)', fill = 'Oxygen SD\n(μmol/kg)')+
   theme(panel.grid = element_blank(), legend.key.width = unit(1, "cm"),
@@ -281,14 +354,24 @@ ggsave(filename = 'paper/images/product_oxy_var_p1.png',
 
 oxy_df <- data.frame(grid_use, value = sqrt(return_variances[[2]][[2]][,3]))
 a <- ggplot()+
-  geom_tile(data = oxy_df%>% filter(latitude > -75),
-            aes(x = longitude, y = latitude, color = value,
+  geom_tile(data = oxy_df %>% filter(latitude > -75),
+            aes(x = longitude, y = latitude, #color = value,
                 fill = value,
-                height = height, width = width)) +
-  scale_fill_viridis_c() + scale_color_viridis_c() + 
+                height = height + .035, width = width + .035)) + 
+  scale_fill_viridis_c() + 
   coord_map('ortho', orientation = c(-90, 0, 0), ylim = c(-90, -30)) +
   SO_theme +
-  fronts_light + continents +
+  geom_contour( data = all_fronts,
+                aes(x = ifelse(longitude > 180, longitude - 360, longitude), 
+                    y = latitude, group = front, z = as.numeric(South), color = front, linetype = front),bins = 1,
+                size = .24) + 
+  scale_linetype_manual(name = 'Front', 
+                        values = c('seaice' = 'F1', 'subantarctic' = 'twodash', 'subtropical' =  'solid'),
+                        labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  scale_color_manual(values = c('seaice' = 'grey95', 'subantarctic' = 'grey95', 'subtropical' =  'grey95'), 
+                     name = 'Front', labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  guides(color='none', linetype='none') +
+  continents +
   latitude_lines + longitude_lines +
   labs(color ='Oxygen SD\n(μmol/kg)', fill = 'Oxygen SD\n(μmol/kg)')+
   theme(panel.grid = element_blank(), legend.key.width = unit(1, "cm"),
@@ -340,11 +423,21 @@ a <- ggplot(data = data.frame(grid_use, score = 1- (avg_var_values[,p] + var_avg
                                 (uncon_avg_var_values[,p] + uncon_var_avg_values[,p])) %>%
               mutate(score = ifelse(score < 0, 0, score), 
                      score = ifelse(score > 1, 1, score))%>% filter(latitude > -75))+
-  geom_tile(aes(x = longitude, y = latitude, color = score,
+  geom_tile(aes(x = longitude, y = latitude,
                 fill = score,
-                height = height, width = width)) +
-  scale_color_viridis_c(limits = c(0, 1)) + scale_fill_viridis_c(limits = c(0, 1)) +   SO_coord + SO_theme +
-  fronts_light + continents + latitude_lines + longitude_lines + 
+                height = height + 0.035, width = width+ 0.035)) +
+  scale_fill_viridis_c(limits = c(0, 1))  +   SO_coord + SO_theme +
+  continents + latitude_lines + longitude_lines + 
+  geom_contour( data = all_fronts,
+                aes(x = ifelse(longitude > 180, longitude - 360, longitude), 
+                    y = latitude, group = front, z = as.numeric(South), color = front, linetype = front),bins = 1,
+                size = .24) + 
+  scale_linetype_manual(name = 'Front', 
+                        values = c('seaice' = 'F1', 'subantarctic' = 'twodash', 'subtropical' =  'solid'),
+                        labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  scale_color_manual(values = c('seaice' = 'grey95', 'subantarctic' = 'grey95', 'subtropical' =  'grey95'), 
+                     name = 'Front', labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  guides(color='none', linetype='none') +
   labs(fill = substitute(paste(nn, ~R^2), list(nn = 'Oxygen'[1])), 
        color = substitute(paste(nn, ~R^2), list(nn = 'Oxygen'[1]))) + 
   theme(text = element_text(size = 16, family = 'Arial'),
@@ -353,7 +446,7 @@ ggsave(filename = 'paper/images/r2.png', a,
        width = 4.5, height = 5.11)
 
 # temperature and salinity
-
+gc()
 return_values <- list()
 return_variances <- list()
 for (q in 1:length(seasons)) {
@@ -367,10 +460,10 @@ for (q in 1:length(seasons)) {
   parameters <- pred_set_up$prediction_model$parameters
   cluster_mat_pred_use <- tail(cluster_mat_full, 
                                dim(pcs_array_response)[1])[, round(1:40 * 2.5)]
-
+  
   var_values <- pred_score_results[['variances']]
   day_use <- tail(pred_set_up$prediction_model$data_inputs$day, dim(pcs_array_response)[1])
-
+  
   covariates <- diag(c(1,
                        sin(day_use[1]/365.25 * 2 * pi * 1),
                        cos(day_use[1]/365.25 * 2 * pi * 1),
@@ -385,7 +478,7 @@ for (q in 1:length(seasons)) {
       z_i_tau <- cluster_mat_pred_use[r,mc]
       values[r,mc, ] <- 1/ncol(cluster_mat_pred_use) * 
         as.double(Phi_pred %*% (rowSums(parameters[['means_predictors']][[z_i_tau]] %*% diag(covariates)) + 
-                             parameters[['Omega_predictors']][[z_i_tau]] %*% pcs_array_predictors[r,mc,]))
+                                  parameters[['Omega_predictors']][[z_i_tau]] %*% pcs_array_predictors[r,mc,]))
     }
   }
   avg_values <- apply(values,c(1,3), function(x) sum(x))
@@ -415,21 +508,31 @@ for (q in 1:length(seasons)) {
 
 
 t_df <- data.frame(grid_use, 
-                     dplyr::bind_rows(lapply(1:length(seasons), 
-                                             function(x) data.frame(value = return_values[[x]][,3],
-                                                                    month = paste(c('January', 'April', 'July', 'October')[x], 2020) ))))
+                   dplyr::bind_rows(lapply(1:length(seasons), 
+                                           function(x) data.frame(value = return_values[[x]][,3],
+                                                                  month = paste(c('January', 'April', 'July', 'October')[x], 2020) ))))
 t_df$month <- factor(t_df$month,
-                       levels = c('January 2020', 'April 2020', 'July 2020', 'October 2020'))
+                     levels = c('January 2020', 'April 2020', 'July 2020', 'October 2020'))
 
 a <- ggplot()+
   geom_tile(data = t_df%>% filter(latitude > -75),
-            aes(x = longitude, y = latitude, color = value,
+            aes(x = longitude, y = latitude,# color = value,
                 fill = value,
-                height = height, width = width)) + 
-  scale_fill_viridis_c() + scale_color_viridis_c() + 
+                height = height + 0.035, width = width + .035)) + 
+  scale_fill_viridis_c() + 
   coord_map('ortho', orientation = c(-90, 0, 0), ylim = c(-90, -30)) +
   SO_theme +
-  fronts_light + continents +
+  geom_contour( data = all_fronts,
+                aes(x = ifelse(longitude > 180, longitude - 360, longitude), 
+                    y = latitude, group = front, z = as.numeric(South), color = front, linetype = front),bins = 1,
+                size = .24) + 
+  scale_linetype_manual(name = 'Front', 
+                        values = c('seaice' = 'F1', 'subantarctic' = 'twodash', 'subtropical' =  'solid'),
+                        labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  scale_color_manual(values = c('seaice' = 'grey95', 'subantarctic' = 'grey95', 'subtropical' =  'grey95'), 
+                     name = 'Front', labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  guides(color='none', linetype='none') +
+  continents +
   latitude_lines + longitude_lines +
   facet_wrap(~month, nrow = 2, ncol = 2) + 
   labs(color ='Temperature Prediction\n(°C)', fill = 'Temperature Prediction\n(°C)')+
@@ -448,13 +551,23 @@ s_df$month <- factor(s_df$month,
 
 a <- ggplot()+
   geom_tile(data = s_df%>% filter(latitude > -75),
-            aes(x = longitude, y = latitude, color = value,
+            aes(x = longitude, y = latitude,# color = value,
                 fill = value,
-                height = height, width = width)) + 
-  scale_fill_viridis_c() + scale_color_viridis_c() + 
+                height = height + 0.035, width = width + .035)) + 
+  scale_fill_viridis_c() + 
   coord_map('ortho', orientation = c(-90, 0, 0), ylim = c(-90, -30)) +
   SO_theme +
-  fronts_light + continents +
+  geom_contour( data = all_fronts,
+                aes(x = ifelse(longitude > 180, longitude - 360, longitude), 
+                    y = latitude, group = front, z = as.numeric(South), color = front, linetype = front),bins = 1,
+                size = .24) + 
+  scale_linetype_manual(name = 'Front', 
+                        values = c('seaice' = 'F1', 'subantarctic' = 'twodash', 'subtropical' =  'solid'),
+                        labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  scale_color_manual(values = c('seaice' = 'grey95', 'subantarctic' = 'grey95', 'subtropical' =  'grey95'), 
+                     name = 'Front', labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  guides(color='none', linetype='none') +
+  continents +
   latitude_lines + longitude_lines +
   facet_wrap(~month, nrow = 2, ncol = 2) + 
   labs(color ='Salinity Prediction\n(PSU)', fill = 'Salinity Prediction\n(PSU)')+
@@ -476,13 +589,23 @@ t_df$month <- factor(t_df$month,
 
 a <- ggplot()+
   geom_tile(data = t_df%>% filter(latitude > -75),
-            aes(x = longitude, y = latitude, color = value,
+            aes(x = longitude, y = latitude,# color = value,
                 fill = value,
-                height = height, width = width)) + 
-  scale_fill_viridis_c() + scale_color_viridis_c() + 
+                height = height + 0.035, width = width + .035)) + 
+  scale_fill_viridis_c() + 
   coord_map('ortho', orientation = c(-90, 0, 0), ylim = c(-90, -30)) +
   SO_theme +
-  fronts_light + continents +
+  geom_contour( data = all_fronts,
+                aes(x = ifelse(longitude > 180, longitude - 360, longitude), 
+                    y = latitude, group = front, z = as.numeric(South), color = front, linetype = front),bins = 1,
+                size = .24) + 
+  scale_linetype_manual(name = 'Front', 
+                        values = c('seaice' = 'F1', 'subantarctic' = 'twodash', 'subtropical' =  'solid'),
+                        labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  scale_color_manual(values = c('seaice' = 'grey95', 'subantarctic' = 'grey95', 'subtropical' =  'grey95'), 
+                     name = 'Front', labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  guides(color='none', linetype='none') +
+  continents +
   latitude_lines + longitude_lines +
   facet_wrap(~month, nrow = 2, ncol = 2) + 
   labs(color ='Temperature SD\n(°C)', fill = 'Temperature SD\n(°C)')+
@@ -502,13 +625,23 @@ s_df$month <- factor(s_df$month,
 
 a <- ggplot()+
   geom_tile(data = s_df%>% filter(latitude > -75),
-            aes(x = longitude, y = latitude, color = value,
+            aes(x = longitude, y = latitude,# color = value,
                 fill = value,
-                height = height, width = width)) + 
-  scale_fill_viridis_c() + scale_color_viridis_c() + 
+                height = height + 0.035, width = width + .035)) + 
+  scale_fill_viridis_c() + 
   coord_map('ortho', orientation = c(-90, 0, 0), ylim = c(-90, -30)) +
   SO_theme +
-  fronts_light + continents +
+  geom_contour( data = all_fronts,
+                aes(x = ifelse(longitude > 180, longitude - 360, longitude), 
+                    y = latitude, group = front, z = as.numeric(South), color = front, linetype = front),bins = 1,
+                size = .24) + 
+  scale_linetype_manual(name = 'Front', 
+                        values = c('seaice' = 'F1', 'subantarctic' = 'twodash', 'subtropical' =  'solid'),
+                        labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  scale_color_manual(values = c('seaice' = 'grey95', 'subantarctic' = 'grey95', 'subtropical' =  'grey95'), 
+                     name = 'Front', labels = c('Max extent sea ice', 'Subantarctic', 'Subtropical'))+
+  guides(color='none', linetype='none') +
+  continents +
   latitude_lines + longitude_lines +
   facet_wrap(~month, nrow = 2, ncol = 2) + 
   labs(color ='Salinity SD\n(PSU)', fill = 'Salinity SD\n(PSU)')+
@@ -600,15 +733,15 @@ for (q in 1:length(seasons)) {
       # first part of variance
     }
     return_values[[q]][[i]] <- data.frame('oxygen' = apply(values_reduced[i,,],2, function(x) mean(x)),
-                                 'v_p1' = apply(var_values1_reduced[i,,],2, function(x) mean(x)),
-                                 'v_p2' = apply(values_reduced[i,,], 2, function(x) mean((x -
-                                                                                            mean(x))^2)),
-                                 'oxygen_var' = apply(var_values1_reduced[i,,],2, function(x) mean(x )) +
-                                   apply(values_reduced[i,,], 2, function(x) mean((x -
-                                                                                     mean(x ))^2)),
-                                 'pressure' = pressures,
-                                 'latitude' = grid_use_subset[i,'latitude'], 
-                                 'month' = c('January', 'April', 'July', 'October')[q])
+                                          'v_p1' = apply(var_values1_reduced[i,,],2, function(x) mean(x)),
+                                          'v_p2' = apply(values_reduced[i,,], 2, function(x) mean((x -
+                                                                                                     mean(x))^2)),
+                                          'oxygen_var' = apply(var_values1_reduced[i,,],2, function(x) mean(x )) +
+                                            apply(values_reduced[i,,], 2, function(x) mean((x -
+                                                                                              mean(x ))^2)),
+                                          'pressure' = pressures,
+                                          'latitude' = grid_use_subset[i,'latitude'], 
+                                          'month' = c('January', 'April', 'July', 'October')[q])
     
   }
   gc()
@@ -627,7 +760,7 @@ ggplot(data = values_df %>%left_join(data.frame(month = month.name[c(1, 4, 7, 10
                                                                                'October 2020')))) %>%
          filter(latitude %in% latitudes_use),
        aes(color = latitude, y = pressure, x = oxygen,
-                                                                     group = latitude))+
+           group = latitude))+
   geom_path() + 
   scale_y_continuous(trans = 'reverse') + 
   labs(x = 'Oxygen Prediction\n(μmol/kg)', y = 'Pressure (decibars)', color = 'Latitude')+ 
@@ -646,7 +779,7 @@ ggplot(data = values_df %>%left_join(data.frame(month = month.name[c(1, 4, 7, 10
                                                                                'October 2020')))) %>%
          filter(latitude %in% latitudes_use), 
        aes(color = latitude, y = pressure, x = sqrt(oxygen_var),
-                                                                     group = latitude))+
+           group = latitude))+
   geom_path() + 
   facet_wrap(~month_label, ncol = 4) + 
   scale_y_continuous(trans = 'reverse') + 
